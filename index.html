@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Components</title>
+</head>
+<body>
+  <h1>Web Components  Test</h1>
+
+  <section id="components-root"></section>
+
+  <script>
+    const onLoad = (evt) => {
+      const componentName = evt.currentTarget.dataset.name;
+      const componentElement = document.createElement(componentName);
+      document.getElementById('components-root').append(componentElement);
+    };
+
+    const onError = (err) => {
+      console.error('Component script loading error:', err);
+    };
+
+    const components = ['my-select'];
+
+    components.forEach((component) => {
+      const script = document.createElement('script');
+      script.src = `./${component}.js`;
+      script.dataset.name = component;
+      script.addEventListener('load', onLoad);
+      script.addEventListener('error', onError);
+      document.body.append(script);
+    });
+  </script>
+</body>
+</html>
