@@ -1,5 +1,6 @@
 
 class MySelect extends HTMLElement {
+  #shadow;
   #selectButton;
   #selectPopup;
   #selectPopupSearch;
@@ -11,6 +12,7 @@ class MySelect extends HTMLElement {
       return;
     }
 
+    this.#shadow = this.attachShadow({ mode: 'open' });
     this.#createTemplate();
     this.#isInitialized = true;
   }
@@ -25,73 +27,115 @@ class MySelect extends HTMLElement {
     template.innerHTML = `
       <style>
         :host {
+          position: relative;
           display: inline-block;
-          font-family: Arial, sans-serif;
+          font-family: Inter, Arial, sans-serif;
         }
 
         .select-root {
-          position: relative;
           width: 260px;
         }
 
         .select-button {
           width: 100%;
-          padding: 10px 12px;
-          border: 1px solid #94a3b8;
-          border-radius: 8px;
+          min-height: 42px;
+          padding: 9px 12px;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
           background: #ffffff;
-          color: #0f172a;
+          color: #334155;
           text-align: left;
           cursor: pointer;
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .select-button:hover {
+          border-color: #94a3b8;
+        }
+
+        .select-button:focus-visible {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
         }
 
         .select-popup {
-          margin-top: 8px;
+          display: none;
+          position: absolute;
+          top: calc(100% + 4px);
+          left: 0;
+          z-index: 10;
+          width: 100%;
+          box-sizing: border-box;
           padding: 10px;
-          border: 1px solid #d1d5db;
-          border-radius: 8px;
-          background: #f8fafc;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+          background: var(--select-popup-background, white);
+          box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+        }
+
+        .select-popup.open {
+          display: block;
         }
 
         .select-popup-search {
           box-sizing: border-box;
           width: 100%;
           margin-bottom: 8px;
-          padding: 8px 10px;
+          padding: 8px 9px;
           border: 1px solid #cbd5e1;
           border-radius: 6px;
+          font-size: 14px;
+        }
+
+        .select-popup-search:focus {
+          outline: none;
+          border-color: #3b82f6;
         }
 
         .select-popup-options {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 4px;
+          max-height: 220px;
+          overflow: auto;
         }
 
         .option {
           display: flex;
           align-items: center;
           gap: 8px;
-          color: #1e293b;
+          padding: 6px 6px;
+          border-radius: 4px;
+          color: #0f172a;
           cursor: pointer;
+        }
+
+        .option:hover {
+          background: #f1f5f9;
         }
       </style>
       <div class="select-root">
         <button type="button" class="select-button">Select option</button>
         <div class="select-popup">
           <input class="select-popup-search" placeholder="Search..." />
-          <div class="select-popup-options"></div>
         </div>
       </div>
     `;
 
-    this.replaceChildren(template.content.cloneNode(true));
+    this.#shadow.replaceChildren(template.content.cloneNode(true));
+    this.replaceChildren();
 
-    this.#selectButton = this.querySelector('.select-button');
-    this.#selectPopup = this.querySelector('.select-popup');
-    this.#selectPopupSearch = this.querySelector('.select-popup-search');
+    this.#selectButton = this.#shadow.querySelector('.select-button');
+    this.#selectPopup = this.#shadow.querySelector('.select-popup');
+    this.#selectPopupSearch = this.#shadow.querySelector('.select-popup-search');
     this.#optionsBox = this.#renderOptions(options);
     this.#selectPopup.append(this.#optionsBox);
+    this.#selectButton.addEventListener('click', () => this.#openPopup());
+  }
+
+  #openPopup() {
+    this.#selectPopup.classList.toggle('open');
   }
 
   #renderOptions(options) {
