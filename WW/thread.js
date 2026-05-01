@@ -1,17 +1,21 @@
 self.onmessage = (event) => {
   const timeout = Number(event.data?.timeout) || 3000;
-  const start = performance.now();
-  let x = 0;
-  let i = 0;
+  const childWorker = new Worker('./thread2.js');
 
-  do {
-    i += 1;
-    x += (Math.random() - 0.5) * i;
-  } while (performance.now() - start < timeout);
+  childWorker.onmessage = (childEvent) => {
+    self.postMessage(childEvent.data);
+    childWorker.terminate();
+  };
 
-  self.postMessage({
-    x: Number(x.toFixed(2)),
-    iterations: i,
-    spentMs: Math.round(performance.now() - start),
-  });
+  childWorker.onerror = () => {
+    childWorker.terminate();
+    self.postMessage({
+      x: 0,
+      iterations: 0,
+      spentMs: 0,
+      error: 'thread2 worker error',
+    });
+  };
+
+  childWorker.postMessage({ timeout });
 };
