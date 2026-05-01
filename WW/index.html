@@ -65,7 +65,7 @@
         resultElement.textContent = 'Running...';
 
         if (!thread) {
-          thread = new Worker('./WW/thread.js');
+          thread = new Worker('./thread.js');
 
 
           thread.onmessage = (evt) => {
