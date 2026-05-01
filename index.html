@@ -1,100 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Web Worker Experiment</title>
-  <style>
-    @keyframes spinner {
-      0% {
-        transform: scale(.1) rotate(0deg);
-        fill: currentColor;
-      }
-      33% {
-        transform: scale(1) rotate(150deg);
-        fill: transparent;
-      }
-      66% {
-        transform: scale(1) rotate(210deg);
-        fill: transparent;
-      }
-      100% {
-        transform: scale(.1) rotate(360deg);
-        fill: currentColor;
-      }
-    }
-
-    body {
-      font-family: Arial, sans-serif;
-      padding: 16px;
-    }
-
-    .spinner {
-      animation: spinner 1.5s infinite linear;
-      color: rgb(6, 75, 67);
-      visibility: hidden;
-    }
-
-    .spinner.active {
-      visibility: visible;
-    }
-
-    #result {
-      margin-top: 12px;
-      font-weight: 600;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Components</title>
 </head>
 <body>
-  <button id="start">Start!</button>
-  <div>
-    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="56" fill="none" class="spinner" id="spinner">
-      <path stroke="currentColor" stroke-width="4" d="M3.464 30a4 4 0 0 1 0-4L16 4.287a4 4 0 0 1 3.464-2h25.072a4 4 0 0 1 3.464 2L60.536 26a4 4 0 0 1 0 4L48 51.713a4 4 0 0 1-3.464 2H19.464a4 4 0 0 1-3.464-2L3.464 30Z"/>
-    </svg>
-  </div>
-  <div id="result"></div>
+  <h1>Web Components  Test</h1>
+
+  <section id="components-root"></section>
 
   <script>
-    const resultElement = document.getElementById('result');
-    const spinner = document.getElementById('spinner');
-    let thread = null;
+    const components = ['my-panel', 'my-select'];
+    const loadedComponents = new Set();
+    let isRendered = false;
 
-    document.getElementById('start').addEventListener('click', () => {
-      if (window.Worker) {
-        spinner.classList.add('active');
-        resultElement.textContent = 'Running...';
-
-        if (!thread) {
-          thread = new Worker('./thread.js');
-
-          thread.onmessage = (evt) => {
-            const data = evt.data;
-            resultElement.textContent =
-              `Done in ${data.spentMs} ms; iterations: ${data.iterations}; x: ${data.x}`;
-            spinner.classList.remove('active');
-          };
-
-          thread.onerror = () => {
-            resultElement.textContent = 'Worker error';
-            spinner.classList.remove('active');
-            thread.terminate();
-            thread = null;
-          };
-        }
-
-        const timeout = 2000 + Math.floor(Math.random() * 3001); // 2000..5000 ms
-
-        thread.postMessage({ timeout });
-      } else {
-        resultElement.textContent = 'Web Worker is not supported';
+    const renderComponents = () => {
+      if (isRendered) {
+        return;
       }
-    });
 
-    window.addEventListener('beforeunload', () => {
-      if (thread) {
-        thread.terminate();
-        thread = null;
+      const root = document.getElementById('components-root');
+      const panel = document.createElement('my-panel');
+      panel.dataset.header = 'Advanced Panel';
+      panel.setAttribute('panel-subtitle', 'Custom Select in slot content');
+
+      const select = document.createElement('my-select');
+      const options = [
+        { value: 'opt1', text: 'Option 1' },
+        { value: 'opt2', text: 'Option 2' },
+        { value: 'opt3', text: 'Option 3' },
+        { value: 'opt4', text: 'Option 4' },
+      ];
+
+      select.innerHTML = `
+        <div slot="search">
+          <input class="light-find-box" placeholder="Поиск..." />
+        </div>
+        ${options.map((option) => `<option value="${option.value}">${option.text}</option>`).join('')}
+      `;
+
+      panel.append(select);
+      root.replaceChildren(panel);
+      isRendered = true;
+    };
+
+    const onLoad = (evt) => {
+      const componentName = evt.currentTarget.dataset.name;
+      loadedComponents.add(componentName);
+      if (loadedComponents.size === components.length) {
+        renderComponents();
       }
+    };
+
+    const onError = (err) => {
+      console.error('Component script loading error:', err);
+    };
+
+    components.forEach((component) => {
+      const script = document.createElement('script');
+      script.src = `./${component}.js`;
+      script.dataset.name = component;
+      script.addEventListener('load', onLoad);
+      script.addEventListener('error', onError);
+      document.body.append(script);
     });
   </script>
 </body>
