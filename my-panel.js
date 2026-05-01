@@ -2,6 +2,10 @@ class MyPanel extends HTMLElement {
   #shadow;
   #isInitialized = false;
 
+  static get observedAttributes() {
+    return ['panel-subtitle'];
+  }
+
   connectedCallback() {
     if (this.#isInitialized) {
       return;
@@ -12,9 +16,22 @@ class MyPanel extends HTMLElement {
     this.#isInitialized = true;
   }
 
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (!this.#isInitialized || oldValue === newValue) {
+      return;
+    }
+
+    if (name === 'panel-subtitle') {
+      const subtitle = this.#shadow.querySelector('.panel-subtitle');
+      if (subtitle) {
+        subtitle.textContent = newValue || '';
+      }
+    }
+  }
+
   #createTemplate() {
     const header = this.dataset.header || 'Panel';
-    const subheader = this.dataset.subheader || '';
+    const subheader = this.getAttribute('panel-subtitle') || '';
 
     const template = document.createElement('template');
     template.innerHTML = `

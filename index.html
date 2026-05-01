@@ -23,7 +23,7 @@
       const root = document.getElementById('components-root');
       const panel = document.createElement('my-panel');
       panel.dataset.header = 'Advanced Panel';
-      panel.dataset.subheader = 'Custom Select in slot content';
+      panel.setAttribute('panel-subtitle', 'Custom Select in slot content');
 
       const select = document.createElement('my-select');
       const options = [
