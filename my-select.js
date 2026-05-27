@@ -1,46 +1,50 @@
 
 class MySelect extends HTMLElement {
   connectedCallback() {
-    const styles = `
-      :host {
-        display: inline-block;
-        font-family: Arial, sans-serif;
-      }
+    if (this.shadowRoot) {
+      return;
+    }
 
-      .select-wrapper {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        width: 220px;
-        padding: 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 10px;
-        background: #f8fafc;
-      }
+    const shadow = this.attachShadow({ mode: 'open' });
 
-      .label {
-        font-size: 14px;
-        color: #334155;
-      }
+    shadow.innerHTML = `
+      <style>
+        :host {
+          display: inline-block;
+          font-family: Arial, sans-serif;
+        }
 
-      .native-select {
-        padding: 8px 10px;
-        border: 1px solid #94a3b8;
-        border-radius: 8px;
-        background: #ffffff;
-        color: #0f172a;
-        outline: none;
-        cursor: pointer;
-      }
+        .select-wrapper {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          width: 220px;
+          padding: 12px;
+          border: 1px solid #d1d5db;
+          border-radius: 10px;
+          background: #f8fafc;
+        }
 
-      .native-select:focus {
-        border-color: #2563eb;
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
-      }
-    `;
+        .label {
+          font-size: 14px;
+          color: #334155;
+        }
 
-    this.innerHTML = `
-      <style>${styles}</style>
+        .native-select {
+          padding: 8px 10px;
+          border: 1px solid #94a3b8;
+          border-radius: 8px;
+          background: #ffffff;
+          color: #0f172a;
+          outline: none;
+          cursor: pointer;
+        }
+
+        .native-select:focus {
+          border-color: #2563eb;
+          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        }
+      </style>
       <label class="select-wrapper">
         <span class="label">Choose a value:</span>
         <select class="native-select">
@@ -53,4 +57,8 @@ class MySelect extends HTMLElement {
   }
 }
 
-customElements.define('my-select', MySelect);
+const name = document.currentScript?.dataset?.name || 'my-select';
+
+if (!customElements.get(name)) {
+  customElements.define(name, MySelect);
+}
