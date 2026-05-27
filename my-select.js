@@ -1,5 +1,25 @@
 
 class MySelect extends HTMLElement {
+  #shadow;
+  #selectButton;
+  #selectPopup;
+  #searchSlot;
+  #defaultSearchInput;
+  #activeSearchInput;
+  #optionsBox;
+  #optionsData = [];
+  #selectedValues = new Set();
+  #isInitialized = false;
+  #onOutsideClick = (event) => {
+    if (!event.composedPath().includes(this)) {
+      this.#closePopup();
+    }
+  };
+
+  #onSearchInput = (event) => {
+    this.#applyFilter(event.target.value);
+  };
+
   connectedCallback() {
     if (this.shadowRoot) {
       return;
@@ -54,6 +74,16 @@ class MySelect extends HTMLElement {
         </select>
       </label>
     `;
+
+    options.forEach((option) => {
+      const optionElement = optionTemplate.content.firstElementChild.cloneNode(true);
+      optionElement.dataset.value = option.value;
+      optionElement.querySelector('input').value = option.value;
+      optionElement.querySelector('.option-text').textContent = option.text;
+      optionsContainer.append(optionElement);
+    });
+
+    return optionsContainer;
   }
 }
 

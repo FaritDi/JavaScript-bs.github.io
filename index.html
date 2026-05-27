@@ -11,17 +11,51 @@
   <section id="components-root"></section>
 
   <script>
+    const components = ['my-panel', 'my-select'];
+    const loadedComponents = new Set();
+    let isRendered = false;
+
+    const renderComponents = () => {
+      if (isRendered) {
+        return;
+      }
+
+      const root = document.getElementById('components-root');
+      const panel = document.createElement('my-panel');
+      panel.dataset.header = 'Advanced Panel';
+      panel.setAttribute('panel-subtitle', 'Custom Select in slot content');
+
+      const select = document.createElement('my-select');
+      const options = [
+        { value: 'opt1', text: 'Option 1' },
+        { value: 'opt2', text: 'Option 2' },
+        { value: 'opt3', text: 'Option 3' },
+        { value: 'opt4', text: 'Option 4' },
+      ];
+
+      select.innerHTML = `
+        <div slot="search">
+          <input class="light-find-box" placeholder="Поиск..." />
+        </div>
+        ${options.map((option) => `<option value="${option.value}">${option.text}</option>`).join('')}
+      `;
+
+      panel.append(select);
+      root.replaceChildren(panel);
+      isRendered = true;
+    };
+
     const onLoad = (evt) => {
       const componentName = evt.currentTarget.dataset.name;
-      const componentElement = document.createElement(componentName);
-      document.getElementById('components-root').append(componentElement);
+      loadedComponents.add(componentName);
+      if (loadedComponents.size === components.length) {
+        renderComponents();
+      }
     };
 
     const onError = (err) => {
       console.error('Component script loading error:', err);
     };
-
-    const components = ['my-select'];
 
     components.forEach((component) => {
       const script = document.createElement('script');

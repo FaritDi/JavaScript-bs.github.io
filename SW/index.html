@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Синхронизация через Service Worker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 16px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    #status {
+      color: #334155;
+      margin-bottom: 8px;
+    }
+
+    #result {
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <button id="start">Старт</button>
+    <button id="unregister">Удалить Service Worker</button>
+  </div>
+  <div id="status">Service Worker: инициализация...</div>
+  <div id="result">Результат: нет данных</div>
+
+  <script>
+    const MESSAGE_TYPES = {
+      GET_CACHED_RESULT: 'GET_CACHED_RESULT',
+      REGENERATE: 'REGENERATE',
+      UNREGISTER: 'UNREGISTER',
+      RESULT: 'RESULT',
+      UNREGISTERED: 'UNREGISTERED',
+      ERROR: 'ERROR',
+    };
+
+    const statusEl = document.getElementById('status');
+    const resultEl = document.getElementById('result');
+    const startBtn = document.getElementById('start');
+    const unregisterBtn = document.getElementById('unregister');
+    const tabsChannel = new BroadcastChannel('sw_tabs_sync');
+
+    const getServiceWorker = async (scriptURL, options) => {
+      if (!('serviceWorker' in navigator)) {
+        return null;
+      }
+
+      try {
+        let registration = await navigator.serviceWorker.getRegistration(options?.scope);
+        if (!registration) {
+          registration = await navigator.serviceWorker.register(scriptURL, options);
+        }
+
+        await navigator.serviceWorker.ready;
+        const controller =
+          registration.active || registration.waiting || registration.installing;
+        if (!controller) {
+          return null;
+        }
+
+        return {
+          registration,
+          container: navigator.serviceWorker,
+          controller,
+          addEventListener: navigator.serviceWorker.addEventListener.bind(
+            navigator.serviceWorker
+          ),
+          postMessage: controller.postMessage.bind(controller),
+        };
+      } catch (error) {
+        console.error(`Не удалось зарегистрировать Service Worker: ${error}`);
+        return null;
+      }
+    };
+
+    (async () => {
+      let serviceWorker = null;
+
+    
+      navigator.serviceWorker.addEventListener('message', (evt) => {
+        const msg = evt.data || {};
+
+        if (msg.type === MESSAGE_TYPES.RESULT) {
+          let sourceText = 'неизвестно';
+          if (msg.data.source === 'memory-cache') sourceText = 'кеш в памяти';
+          if (msg.data.source === 'storage-cache') sourceText = 'кеш в хранилище';
+          if (msg.data.source === 'recalculated') sourceText = 'пересчитано';
+          if (msg.data.source === 'calculated') sourceText = 'вычислено';
+
+          resultEl.textContent =
+            `Результат: ${msg.data.x}; итераций: ${msg.data.iterations}; ` +
+            `время: ${msg.data.spentMs} мс (${sourceText})`;
+          statusEl.textContent = 'Service Worker готов';
+          return;
+        }
+
+        if (msg.type === MESSAGE_TYPES.UNREGISTERED) {
+          serviceWorker = null;
+          statusEl.textContent = 'Service Worker удален';
+          resultEl.textContent = 'Результат: кеш очищен во всех вкладках';
+
+          navigator.serviceWorker.getRegistration('./').then((registration) => {
+            if (registration) {
+              registration.unregister();
+            }
+          });
+          return;
+        }
+
+        if (msg.type === MESSAGE_TYPES.ERROR) {
+          resultEl.textContent = `Ошибка: ${msg.error}`;
+          statusEl.textContent = 'Ошибка при обработке';
+        }
+      });
+
+      // --- Синхронизация вкладок (если сообщение от SW не дошло) ---
+      tabsChannel.onmessage = (evt) => {
+        if (evt.data?.type !== MESSAGE_TYPES.UNREGISTERED) {
+          return;
+        }
+
+        serviceWorker = null;
+        statusEl.textContent = 'Service Worker удален';
+        resultEl.textContent = 'Результат: кеш очищен во всех вкладках';
+
+        navigator.serviceWorker.getRegistration('./').then((registration) => {
+          if (registration) {
+            registration.unregister();
+          }
+        });
+      };
+
+      // --- SW снят с контроля над вкладкой ---
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!navigator.serviceWorker.controller) {
+          serviceWorker = null;
+          statusEl.textContent = 'Service Worker удален';
+          resultEl.textContent = 'Результат: кеш очищен во всех вкладках';
+        }
+      });
+
+      // --- Регистрация SW при загрузке страницы ---
+      serviceWorker = await getServiceWorker('./thread.js', { scope: './' });
+      if (!serviceWorker) {
+        statusEl.textContent = 'Service Worker недоступен.';
+        return;
+      }
+
+      statusEl.textContent = 'Service Worker готов';
+
+      serviceWorker.postMessage({
+        type: MESSAGE_TYPES.GET_CACHED_RESULT,
+        payload: { timeout: 3000 },
+      });
+
+      // --- Кнопка «Старт» ---
+      startBtn.addEventListener('click', async () => {
+        const registration = await navigator.serviceWorker.getRegistration('./');
+
+        if (!registration?.active || !serviceWorker) {
+          serviceWorker = null;
+          statusEl.textContent = 'Service Worker не зарегистрирован, обновите страницу';
+          return;
+        }
+
+        statusEl.textContent = 'Пересчет...';
+        serviceWorker.postMessage({
+          type: MESSAGE_TYPES.REGENERATE,
+          payload: { timeout: 3000 },
+        });
+      });
+
+      // --- Кнопка «Удалить Service Worker» ---
+      unregisterBtn.addEventListener('click', () => {
+        if (!serviceWorker) {
+          statusEl.textContent = 'Service Worker уже удален';
+          return;
+        }
+
+        serviceWorker.postMessage({ type: MESSAGE_TYPES.UNREGISTER });
+      });
+    })();
+  </script>
+</body>
+</html>
