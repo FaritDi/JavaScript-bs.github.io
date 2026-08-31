@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Web Worker — задание 1</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 16px; }
+    .spinner { animation: spin 1.5s infinite linear; color: rgb(6, 75, 67); visibility: hidden; }
+    .spinner.active { visibility: visible; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <p>Задание 1: воркер завершается после каждого расчёта (<code>terminate()</code> в <code>onmessage</code>)</p>
+  <button id="start">Start!</button>
+  <svg class="spinner" id="spinner" width="32" height="32" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31.4 31.4"/>
+  </svg>
+  <div id="result"></div>
+
+  <script>
+    const resultElement = document.getElementById('result');
+    const spinner = document.getElementById('spinner');
+
+    document.getElementById('start').addEventListener('click', () => {
+      if (!window.Worker) {
+        resultElement.textContent = 'Web Worker is not supported';
+        return;
+      }
+
+      spinner.classList.add('active');
+      resultElement.textContent = 'Running...';
+
+      const thread = new Worker('./thread.js');
+      const timeout = 2000 + Math.floor(Math.random() * 3001);
+
+      thread.onmessage = (evt) => {
+        const data = evt.data;
+        resultElement.textContent =
+          `Done in ${data.spentMs} ms; iterations: ${data.iterations}; x: ${data.x}`;
+        spinner.classList.remove('active');
+        thread.terminate();
+      };
+
+      thread.onerror = () => {
+        resultElement.textContent = 'Worker error';
+        spinner.classList.remove('active');
+        thread.terminate();
+      };
+
+      thread.postMessage({ timeout });
+    });
+  </script>
+</body>
+</html>

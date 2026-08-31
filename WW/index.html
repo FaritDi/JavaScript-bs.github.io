@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Web Worker Experiment</title>
+  <title>Web Worker — задание 2</title>
   <style>
     @keyframes spinner {
       0% {
@@ -46,6 +46,7 @@
   </style>
 </head>
 <body>
+  <p>Задание 2: воркер создаётся при первом нажатии и переиспользуется при следующих</p>
   <button id="start">Start!</button>
   <div>
     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="56" fill="none" class="spinner" id="spinner">
@@ -60,35 +61,40 @@
     let thread = null;
 
     document.getElementById('start').addEventListener('click', () => {
-      if (window.Worker) {
-        spinner.classList.add('active');
-        resultElement.textContent = 'Running...';
-
-        if (!thread) {
-          thread = new Worker('./thread.js');
-
-
-          thread.onmessage = (evt) => {
-            const data = evt.data;
-            resultElement.textContent =
-              `Done in ${data.spentMs} ms; iterations: ${data.iterations}; x: ${data.x}`;
-            spinner.classList.remove('active');
-          };
-
-          thread.onerror = () => {
-            resultElement.textContent = 'Worker error';
-            spinner.classList.remove('active');
-            thread.terminate();
-            thread = null;
-          };
-        }
-
-        const timeout = 2000 + Math.floor(Math.random() * 3001); // 2000..5000 ms
-
-        thread.postMessage({ timeout });
-      } else {
+      if (!window.Worker) {
         resultElement.textContent = 'Web Worker is not supported';
+        return;
       }
+
+      spinner.classList.add('active');
+      resultElement.textContent = 'Running...';
+
+      // Задание 2: воркер создаётся один раз и переиспользуется
+      if (!thread) {
+        thread = new Worker('./thread.js');
+
+        thread.onmessage = (evt) => {
+          const data = evt.data;
+          resultElement.textContent =
+            `Done in ${data.spentMs} ms; iterations: ${data.iterations}; x: ${data.x}`;
+          spinner.classList.remove('active');
+
+          // Задание 1: после выполнения воркер прекращает существование
+          // (закомментировано — иначе невозможно переиспользование из задания 2)
+          // thread.terminate();
+          // thread = null;
+        };
+
+        thread.onerror = () => {
+          resultElement.textContent = 'Worker error';
+          spinner.classList.remove('active');
+          thread.terminate();
+          thread = null;
+        };
+      }
+
+      const timeout = 2000 + Math.floor(Math.random() * 3001); // 2000..5000 ms
+      thread.postMessage({ timeout });
     });
 
     window.addEventListener('beforeunload', () => {
